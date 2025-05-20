@@ -4,26 +4,33 @@ import openai
 import os
 import uuid
 import shutil
+import requests
 
 app = Flask(__name__)
-
-# Read OpenAI API key from environment variable
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 CHUNK_DURATION_MS = 15 * 60 * 1000  # 15 minutes
 
 @app.route('/transcribe', methods=['POST'])
-def transcribe():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file part"}), 400
+def transcribe_from_url():
+    data = request.get_json()
+    if not data or 'url' not in data:
+        return jsonify({"error": "Missing 'url' in request body"}), 400
 
-    file = request.files['file']
+    audio_url = data['url']
     session_id = str(uuid.uuid4())
     os.makedirs(session_id, exist_ok=True)
     filepath = f"{session_id}/input.wav"
-    file.save(filepath)
 
     try:
+        # Download the file from Dropbox link
+        with requests.get(audio_url, stream=True) as r:
+            r.raise_for_status()
+            with open(filepath, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+        # Load and chunk audio
         audio = AudioSegment.from_file(filepath)
         chunks = [audio[i:i + CHUNK_DURATION_MS] for i in range(0, len(audio), CHUNK_DURATION_MS)]
 
