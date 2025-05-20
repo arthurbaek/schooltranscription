@@ -3,3 +3,4 @@ pydub
 openai
 ffmpeg-python
 gunicorn
+requests
