@@ -2,3 +2,4 @@ Flask
 pydub
 openai
 ffmpeg-python
+gunicorn
